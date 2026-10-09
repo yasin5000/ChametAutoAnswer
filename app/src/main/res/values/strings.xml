@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Chamet Auto Answer</string>
+    <string name="accessibility_service_name">Chamet Auto Answer Helper</string>
+    <string name="accessibility_service_description">Looks for clearly labelled answer buttons in Chamet windows and taps only a matching button.</string>
+</resources>
