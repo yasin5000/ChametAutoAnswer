@@ -14,7 +14,7 @@ class ChametAccessibilityService : AccessibilityService() {
 
     private var lastTapAt = 0L
     private val tapCooldownMs = 6_000L
-        private var maskClicked = false
+    private var maskClicked = false
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
@@ -27,9 +27,6 @@ class ChametAccessibilityService : AccessibilityService() {
         val eventPackage = event.packageName?.toString().orEmpty()
         if (!eventPackage.contains("chamet", ignoreCase = true)) return
 
-        val now = SystemClock.elapsedRealtime()
-        if (now - lastTapAt < tapCooldownMs) return
-
         val roots = mutableListOf<AccessibilityNodeInfo>()
         rootInActiveWindow?.let { roots.add(it) }
         try {
@@ -40,6 +37,39 @@ class ChametAccessibilityService : AccessibilityService() {
         } catch (e: Exception) {
             Log.d(TAG, "Could not inspect all windows", e)
         }
+
+        // ধাপ ১: "Uncover The Mask" বাটন এসেছে কি না দেখা (একবারই চাপবে)
+        var maskVisible = false
+        for (root in roots) {
+            if (!root.packageName?.toString().orEmpty().contains("chamet", true)) continue
+            val mask = findNode(root, 0) { n ->
+                val label = ((n.text?.toString().orEmpty()) + " " +
+                    (n.contentDescription?.toString().orEmpty())).lowercase(Locale.ROOT)
+                label.contains("uncover the mask")
+            } ?: continue
+
+            maskVisible = true
+            if (!maskClicked) {
+                val target = clickableAncestor(mask) ?: mask
+                var ok = target.isClickable &&
+                    target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                if (!ok) {
+                    val r = Rect()
+                    mask.getBoundsInScreen(r)
+                    ok = tapAt(r.centerX().toFloat(), r.centerY().toFloat())
+                }
+                if (ok) {
+                    maskClicked = true
+                    Log.i(TAG, "Clicked Uncover The Mask")
+                }
+            }
+        }
+        if (!maskVisible) maskClicked = false   // বাটন চলে গেলে পরের কলের জন্য রিসেট
+        if (maskVisible) return
+
+        // ধাপ ২: কল রিসিভ করা
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastTapAt < tapCooldownMs) return
 
         for (root in roots) {
             if (!root.packageName?.toString().orEmpty().contains("chamet", true)) continue
