@@ -14,6 +14,7 @@ class ChametAccessibilityService : AccessibilityService() {
 
     private var lastTapAt = 0L
     private val tapCooldownMs = 6_000L
+        private var maskClicked = false
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
