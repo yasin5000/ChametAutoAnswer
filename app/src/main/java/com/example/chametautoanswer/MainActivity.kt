@@ -1,19 +1,24 @@
 package com.example.chametautoanswer
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.Switch
 import android.widget.TextView
 
 class MainActivity : Activity() {
     private lateinit var status: TextView
+    private lateinit var toggle: Switch
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -27,12 +32,21 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
         }
 
+        toggle = Switch(this).apply {
+            textSize = 20f
+            setPadding(0, 32, 0, 32)
+            isChecked = prefs.getBoolean(KEY_ENABLED, false)
+            text = label(isChecked)
+            setOnCheckedChangeListener { _, checked ->
+                prefs.edit().putBoolean(KEY_ENABLED, checked).apply()
+                text = label(checked)
+            }
+        }
+
         val instructions = TextView(this).apply {
-            text = "\\n1. Enable the accessibility service below.\\n" +
-                "2. Return here and check the status.\\n" +
-                "3. Test with a call you expect and can safely answer.\\n\\n" +
-                "The helper only attempts a tap when it finds a clearly labelled " +
-                "Answer/Accept/Receive button in a Chamet window. It does not use blind screen coordinates."
+            text = "\n1. Enable the accessibility service below (one time).\n" +
+                "2. Turn the switch above ON when you want calls auto-received.\n" +
+                "3. Turn it OFF when you want to answer calls yourself.\n"
             textSize = 16f
         }
 
@@ -54,6 +68,7 @@ class MainActivity : Activity() {
         }
 
         layout.addView(title)
+        layout.addView(toggle)
         layout.addView(instructions)
         layout.addView(status)
         layout.addView(settingsButton)
@@ -66,6 +81,8 @@ class MainActivity : Activity() {
         super.onResume()
         updateStatus()
     }
+
+    private fun label(on: Boolean) = if (on) "Auto Receive: ON" else "Auto Receive: OFF"
 
     private fun updateStatus() {
         val enabled = try {
@@ -81,9 +98,14 @@ class MainActivity : Activity() {
             false
         }
         status.text = if (enabled) {
-            "Status: Accessibility service appears ENABLED."
+            "Accessibility service: ENABLED"
         } else {
-            "Status: Accessibility service is OFF. Enable “Chamet Auto Answer Helper” in settings."
+            "Accessibility service: OFF. Enable “Chamet Auto Answer Helper” in settings."
         }
+    }
+
+    companion object {
+        const val PREFS = "chamet_prefs"
+        const val KEY_ENABLED = "auto_enabled"
     }
 }
